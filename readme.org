@@ -78,3 +78,7 @@ Running is the same as for the JVM:
   These had compressed sizes of 4MB and 20MB, respectively, which is probably ok.
 
 - the mapped-instance api is somewhat clunky, and can be improved upon.
+
+- native-image segfaults on exit
+
+- some GDNative object memory leaks
