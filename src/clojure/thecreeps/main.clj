@@ -8,6 +8,13 @@
             [tech.v3.datatype.struct :as dtype-struct])
   (:import [tech.v3.datatype.ffi Pointer]))
 
+(comment
+  ;; After connecting with cider to the game,
+  ;; you can view the methods supported by an object, as defined in godot-headers/api.json
+  ;; by instantiating the object, and inspecting it, like so:
+  (:godot/methods (mapped-instance "_OS"))
+  )
+
 (defonce state
   (atom {:player      {:position [100 100]
                        :dir      [0 0]}
