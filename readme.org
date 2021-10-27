@@ -40,11 +40,11 @@ The Clojure code needs C wrappers to be generated and built around the GDNative 
 make
 #+END_SRC
 
-This brings in "godot-headers" and "godotclj" as submodules, and downloads the assets for the game, and generates c bindings for godot.
+This brings in "godot-headers" and "godotclj" as submodules, and downloads the assets for the game, and generates GDNative bindings.
 
 * Running
 
-The first time the game is loaded by godot, the editor needs to be invoked to import the assets.
+The first time the game is loaded by godot, the editor needs to be invoked to import the assets. Run the following script, which expects the "godot" executable to be on the PATH:
 
 #+BEGIN_SRC sh
 ./godotclj/scripts/godot.sh --editor --quit
