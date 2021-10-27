@@ -1,14 +1,22 @@
 * Description
 
-This is Clojure/JVM implementation of the tutorial found at https://docs.godotengine.org/en/stable/tutorials/plugins/gdnative/gdnative-c-example.html.
-It demonstrates native bindings to the godot engine https://godotengine.org/ from Clojure and native compilation via GraalVM native image.
+An example demonstrating *Clojure/JVM* bindings against the *Godot* game engine GDNative API.
 
-It uses the godotclj library to generate bindings for the godot engine.
+It reimplements the tutorial found at https://docs.godotengine.org/en/stable/tutorials/plugins/gdnative/gdnative-c-example.html.
+
+On the JVM, it provides NREPL.
+It can be built as a native shared library using GraalVM native-image.
+
+The game is in this repository. The bindings are generated in the godotclj library.
 
 The following projects are linked as git submodules, which will be brought in when *make* is run:
 
 - https://github.com/tristanstraub/godotclj
 - https://github.com/godotengine/godot-headers
+
+* Getting started
+
+Clone this repository, and refer below to *Building for the JVM* and *Running*
 
 * Dependencies
 
