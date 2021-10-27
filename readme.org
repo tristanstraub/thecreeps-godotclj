@@ -12,7 +12,7 @@ The following projects are linked as git submodules, which will be brought in wh
 
 * Dependencies
 
-- openjdk (15.0.1+, but probably java 11, aswell), clojure (1.10.3), godot (3.3.4), g++, clang, gnu make, graalvm (ce-java11-21.2.0, ce-jdk17-21.3.0)
+- openjdk (15.0.1+, but probably java 11, aswell), clojure (1.10.3), godot (3.3.4;64-bit;linux;standard version), g++, clang, gnu make, graalvm (ce-java11-21.2.0, ce-jdk17-21.3.0)
 
 It is expected that godot, g++, clang, and make are to be found on PATH.
 GraalVM will be found via the GRAALVM_HOME parameter.
