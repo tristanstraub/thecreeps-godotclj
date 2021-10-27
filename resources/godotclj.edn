@@ -1,0 +1,2 @@
+{:main {:jvm     thecreeps.main-jvm/register-methods
+        :graalvm thecreeps.main/register-methods}}

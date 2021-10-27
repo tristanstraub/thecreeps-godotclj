@@ -1,0 +1,6 @@
+{:paths #{"classes" "build" "godot-headers" "src/clojure" "resources"}
+ :deps  {godotclj/godotclj {:local/root "godotclj"}
+
+         nrepl/nrepl       {:mvn/version "0.8.3"}
+         refactor-nrepl    {:mvn/version "2.5.1"}
+         cider/cider-nrepl {:mvn/version "0.26.0"}}}

@@ -1,0 +1,47 @@
+* Description
+
+This is Clojure/JVM implementation of the tutorial found at https://docs.godotengine.org/en/stable/tutorials/plugins/gdnative/gdnative-c-example.html.
+It demonstrates native bindings to the godot engine https://godotengine.org/ from Clojure and native compilation via GraalVM native image.
+
+It uses the godotclj library, linked as a submodule, to generate bindings for the godot engine.
+
+* Dependencies
+
+- clojure, godot (3.3.4), g++, clang, gnu make, graalvm (ce-java11-21.2.0, ce-jdk17-21.3.0)
+
+It is expected that godot, g++, clang, and make are to be found on PATH.
+GraalVM will be found via the GRAALVM_HOME parameter.
+
+* OS
+
+Has been seen working on the following operating systems:
+
+- Fedora 32
+
+* Building for the JVM
+
+#+BEGIN_SRC sh
+make
+#+END_SRC
+
+This brings in "godot-headers" and "godotclj" as submodules, and downloads the assets for the game, and generates c bindings for godot.
+
+The first time the game is loaded by godot, the editor needs to be invoked to import the assets.
+
+#+BEGIN_SRC sh
+./godotclj/scripts/godot.sh --editor --quit
+#+END_SRC
+
+Then, to run the game from the command line, run godot without any arguments:
+
+#+BEGIN_SRC sh
+./godotclj/scripts/godot.sh
+#+END_SRC
+
+* Building for GraalVM native image
+
+Run the following, substitution a value for GRAALVM_HOME:
+
+#+BEGIN_SRC sh
+make -k RUNTIME=graalvm GRAALVM_HOME=$HOME/vendor/graalvm-ce-java17-21.3.0 clean all
+#+END_SRC
