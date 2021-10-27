@@ -6,7 +6,7 @@ CLASSES=$(PWD)/classes
 CLASSPATH=$(shell clj -Spath | clj -M -e "(require 'godotclj.paths)")
 export PROJECT_DIR GODOT_HEADERS BUILD BIN CLASSES CLASSPATH
 
-all: assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so
+all: godot-headers godotclj assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so
 
 clean:
 	rm -fr .cpcache
@@ -24,9 +24,11 @@ assets/dodge_assets: assets/dodge_assets.zip
 assets/icon.png: assets
 	curl https://godotengine.org/themes/godotengine/assets/press/icon_color.png -o assets/icon.png
 
-godot-headers:
+submodules:
 	git submodule init
 	git submodule update
 
-$(BIN)/%.so: godot-headers
+godot-headers godotclj: submodules
+
+$(BIN)/%.so: godot-headers godotclj
 	$(MAKE) -C godotclj $@
