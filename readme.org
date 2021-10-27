@@ -34,7 +34,7 @@ Has been seen working on the following operating systems:
 
 * Building for the JVM
 
-The project needs C wrappers to be generated and built, for JVM and GraalVM native image builds. Run the following build the these wrappers, which will trigger a recursive build into the *godotclj* submodule.
+The Clojure code needs C wrappers to be generated and built around the GDNative API. Run the following, before starting godot:
 
 #+BEGIN_SRC sh
 make
@@ -60,7 +60,7 @@ This will also start an NREPL session.
 
 * Building with GraalVM native image
 
-Run the following, substitution a value for GRAALVM_HOME:
+Run the following, with an appropriate value for GRAALVM_HOME:
 
 #+BEGIN_SRC sh
 make -k RUNTIME=graalvm GRAALVM_HOME=$HOME/vendor/graalvm-ce-java17-21.3.0 clean all
