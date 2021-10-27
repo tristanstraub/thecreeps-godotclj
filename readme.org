@@ -15,6 +15,9 @@ The following projects are linked as git submodules, which will be brought in wh
 - https://github.com/tristanstraub/godotclj
 - https://github.com/godotengine/godot-headers
 
+CAVEAT: The current wrapper around the GDScript API is clunky and can be vastly improved. The main focus has been to ensure that JVM and native builds continue to work
+side by side, while getting the godot engine tutorial implemented.
+
 * Getting started
 
 Clone this repository, and refer below to *Building for the JVM* and *Running*
