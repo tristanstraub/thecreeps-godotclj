@@ -2,7 +2,8 @@
 
 An example demonstrating *Clojure/JVM* bindings against the *Godot* game engine GDNative API.
 
-It reimplements the tutorial found at https://docs.godotengine.org/en/stable/tutorials/plugins/gdnative/gdnative-c-example.html.
+It reimplements the tutorial found at https://docs.godotengine.org/en/stable/getting_started/step_by_step/your_first_game.html
+using GDNative and Clojure.
 
 On the JVM, it provides NREPL.
 It can be built as a native shared library using GraalVM native-image.
