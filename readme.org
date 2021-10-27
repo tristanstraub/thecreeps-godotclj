@@ -70,3 +70,10 @@ Running is the same as for the JVM:
 #+BEGIN_SRC sh
 ./godotclj/scripts/godot.sh
 #+END_SRC
+
+* ISSUES
+
+- the native image is huge, growing from 17MB to over 90MB during development. This issue can probably be resolved.
+  These had compressed sizes of 4MB and 20MB, respectively, which is probably ok.
+
+- the mapped-instance api is somewhat clunky, and can be improved upon.
