@@ -1,6 +1,5 @@
 (ns thecreeps.main
   (:require [godotclj.api :as api :refer [->object]]
-            [godotclj.api.gdscript :as gdscript]
             [godotclj.bindings.godot :as godot]
             [godotclj.callbacks :as callbacks :refer [defer listen]]
             [clojure.core.async :as async]
