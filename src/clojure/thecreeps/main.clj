@@ -8,6 +8,8 @@
             [tech.v3.datatype.struct :as dtype-struct])
   (:import [tech.v3.datatype.ffi Pointer]))
 
+(comment "See godotclj.api.gdscript namespace for methods that are available on gdscript objects")
+
 (defonce state
   (atom {:player      {:position [100 100]
                        :dir      [0 0]}
