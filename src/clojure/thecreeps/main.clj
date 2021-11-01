@@ -1,5 +1,6 @@
 (ns thecreeps.main
-  (:require [godotclj.api :as api :refer [mapped-instance]]
+  (:require [godotclj.api :as api :refer [->object]]
+            [godotclj.api.gdscript :as gdscript]
             [godotclj.bindings.godot :as godot]
             [godotclj.callbacks :as callbacks :refer [defer listen]]
             [clojure.core.async :as async]
@@ -7,13 +8,6 @@
             [tech.v3.datatype.ffi :as dtype-ffi]
             [tech.v3.datatype.struct :as dtype-struct])
   (:import [tech.v3.datatype.ffi Pointer]))
-
-(comment
-  ;; After connecting with cider to the game,
-  ;; you can view the methods supported by an object, as defined in godot-headers/api.json
-  ;; by instantiating the object, and inspecting it, like so:
-  (:godot/methods (mapped-instance "_OS"))
-  )
 
 (defonce state
   (atom {:player      {:position [100 100]
@@ -28,113 +22,90 @@
 
 (defn get-root
   []
-  (let [{:keys [get-main-loop]}              (mapped-instance "_Engine")
-        {:keys [get-current-scene get-root]} (get-main-loop)]
-    (get-root)))
+  (.getRoot (.getMainLoop (->object "_Engine"))))
 
 (defn player-start
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [show set-position get-node]} (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [set-disabled]}               (get-node "CollisionShape2D")]
-    (let [size (:screen-size @state)
-          pos  [(/ (size 0) 2) (/ (size 1) 2)]]
-      (swap! state assoc-in [:player :position] pos)
-      (set-position (api/vec2 pos)))
+  (let [player (->object p_instance)
+        size   (:screen-size @state)
+        shape  (.getNode player "CollisionShape2D")
+        pos    [(/ (size 0) 2) (/ (size 1) 2)]]
+    (swap! state assoc-in [:player :position] pos)
+    (.setPosition player (api/vec2 pos))
 
-    (show)
-    (set-disabled false)))
+    (.show player)
+    (.setDisabled shape false)))
 
 (defn player-ready
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [get-viewport-rect
-                hide
-                connect
-                set-position
-                hide] :as ob} (mapped-instance "Object" (Pointer. p_instance))
-        rect                  (godot/rect2->size (:godot/object (get-viewport-rect)))]
-
-    (hide)
+  (let [ob   (->object p_instance)
+        rect (godot/rect2->size (.getViewportRect ob))]
+    (.hide ob)
 
     (let [size [(godot/vector2-x rect)
                 (godot/vector2-y rect)]]
-      (swap! state assoc :screen-size size)))
-
-  nil)
+      (swap! state assoc :screen-size size))))
 
 (defn hud-show-message
-  [{:keys [get-node] :as hud} text]
-  (let [{:keys [set-text show hide]}      (get-node "Message")
-        {:keys [start] :as message-timer} (get-node "MessageTimer")]
-    (set-text text)
-    (show)
-    (start)
+  [hud text]
+  (let [message       (.getNode hud "Message")
+        message-timer (.getNode hud "MessageTimer")]
+    (doto message
+      (.setText text)
+      (.show))
+
+    (.start message-timer 0)
     (async/go
       (async/<! (listen message-timer "timeout"))
-      (async/<! (defer hide)))))
+      (async/<! (defer #(.hide message))))))
 
 (defn hud-show-game-over
-  [{:keys [get-node get-tree] :as hud}]
+  [hud]
   (async/go
-    (async/<! (defer #(hud-show-message hud "Game Over!!")))
+    (async/<! (defer #(hud-show-message hud "Game Over!")))
     (defer #(hud-show-message hud "Dodge the Creeps!"))
-    (let [{:keys [create-timer]} (get-tree)
-          one-shot-timer         (create-timer 1)
-          {:keys [show]}         (get-node "StartButton")]
+    (let [one-shot-timer (.createTimer (.getTree hud) 1)]
       (async/<! (listen one-shot-timer "timeout"))
-      (defer show))))
+      (defer #(.show (.getNode hud "StartButton"))))))
 
 (defn main-game-over
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [get-node get-tree] :as main} (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [stop]}                       (get-node "Music")
-        {:keys [play]}                       (get-node "DeathSound")
-        {stop-score-timer :stop}             (get-node "ScoreTimer")
-        {stop-mob-timer :stop}               (get-node "MobTimer")
-        hud                                  (get-node "HUD")
-        {:keys [call-group]}                 (get-tree)]
+  (let [main (->object p_instance)]
+    (.stop (.getNode main "Music"))
+    (.play (.getNode main "DeathSound"))
 
-    (stop)
-    (play)
+    (.callGroup (.getTree main) "mobs" "queue_free")
 
-    (call-group "mobs" "queue_free")
+    (doto main
+      (-> (.getNode "ScoreTimer") .stop)
+      (-> (.getNode "MobTimer") .stop))
 
-    (stop-score-timer)
-    (stop-mob-timer)
-
-    (hud-show-game-over hud)))
+    (hud-show-game-over (.getNode main "HUD"))))
 
 (defn hud-update-score
-  [{:keys [get-node] :as hud} score]
-  (let [{:keys [set-text]} (get-node "ScoreLabel")]
-    (set-text (str score))))
+  [hud score]
+  (.setText (.getNode hud "ScoreLabel") (str score)))
 
 (defn main-new-game
   [p_instance p_method_data p_user_data n-args args]
   (swap! state assoc :score 0)
-  (let [{:keys [get-node] :as main} (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [play]}              (get-node "Music")
-        {:keys [get-position]}      (get-node "StartPosition")
-        {:keys [callv]}             (get-node "Player")
-        {start-timer :start}        (get-node "StartTimer")
-        hud                         (get-node "HUD")]
+  (let [main (->object p_instance)]
+    (.play (.getNode main "Music"))
 
-    (play)
+    (doto (.getNode main "HUD")
+      (hud-update-score (:score @state))
+      (hud-show-message "Get Ready"))
 
-    (hud-update-score hud (:score @state))
-    (hud-show-message hud "Get Ready")
-
-    (callv "start" [(get-position)])
-    (start-timer)))
+    (.callv (.getNode main "Player") "start" [(.getPosition (.getNode main "StartPosition"))])
+    (.start (.getNode main "StartTimer"))))
 
 (defn player-body-entered
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [hide get-node emit-signal]} (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [set-deferred]}       (get-node "CollisionShape2D")]
-    (emit-signal "hit")
-    (set-deferred "disabled" true)
-    (hide))
-
-  nil)
+  (let [ob    (->object p_instance)
+        shape (.getNode ob "CollisionShape2D")]
+    (.emitSignal ob "hit")
+    (.setDeferred shape "disabled" true)
+    (.hide ob)))
 
 (defn main-ready
   [p_instance p_method_data p_user_data n-args args]
@@ -149,22 +120,15 @@
 
 (defn player-process
   [p_instance p_method_data p_user_data n-args p_args]
-  (let [speed                       400
-        delta                       (proto/->clj (first (godot/variants n-args p_args)))
-        {:keys [is-action-pressed]} (mapped-instance "Input")
-        {:keys [set-position
-                get-node
-                hide
-                show]}              (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [set-flip-v
-                set-flip-h
-                set-animation
-                play
-                stop]}              (get-node "AnimatedSprite")
-        dir                         (cond (is-action-pressed "ui_right") [1 0]
-                                          (is-action-pressed "ui_left")  [-1 0]
-                                          (is-action-pressed "ui_up")    [0 -1]
-                                          (is-action-pressed "ui_down")  [0 1])]
+  (let [speed           400
+        delta           (proto/->clj (first (godot/variants n-args p_args)))
+        input           (->object "Input")
+        player          (->object p_instance)
+        animated-sprite (.getNode player "AnimatedSprite")
+        dir             (cond (.isActionPressed input "ui_right") [1 0]
+                              (.isActionPressed input "ui_left")  [-1 0]
+                              (.isActionPressed input "ui_up")    [0 -1]
+                              (.isActionPressed input "ui_down")  [0 1])]
     (if dir
       (let [old-dir (or (:dir @state) [0 0])]
         (swap! state
@@ -179,46 +143,38 @@
                                            :to screen-size)
                                     pos)))
                      (assoc :dir dir))))
-        (set-position (api/vec2 (get-in @state [:player :position])))
-        (set-flip-h (not (pos? (dir 0))))
-        (set-flip-v (pos? (dir 1)))
-        (set-animation "walk")
-        (play))
-      (stop)))
+        (.setPosition player (api/vec2 (get-in @state [:player :position])))
+        (doto animated-sprite
+          (.setFlipH (not (pos? (dir 0))))
+          (.setFlipV (pos? (dir 1)))
+          (.setAnimation "walk")
+          (.play "walk" false)))
+      (.stop animated-sprite)))
 
   nil)
 
 (defn mob-ready
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [get-node] :as ob}                                     (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [set-animation get-sprite-frames] :as animated-sprite} (get-node "AnimatedSprite")
-        {:keys [get-animation-names]}                                 (get-sprite-frames)
-        mob-types                                                     (map proto/->clj (api/pool-string-array->vec (:godot/object (get-animation-names))))]
-    (set-animation (rand-nth mob-types)))
-
-  nil)
+  (let [ob              (->object p_instance)
+        animated-sprite (.getNode ob "AnimatedSprite")
+        mob-types       (.. animated-sprite getSpriteFrames getAnimationNames)]
+    (.setAnimation animated-sprite (rand-nth mob-types))))
 
 (defn mob-screen-exited
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [queue-free] :as ob} (mapped-instance "Object" (Pointer. p_instance))]
-    (queue-free)))
+  (.queueFree (->object p_instance)))
 
 (defn main-start-timer-timeout
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [get-node]}         (mapped-instance "Object" (Pointer. p_instance))
-        {start-score-timer :start} (get-node "ScoreTimer")
-        {start-mob-timer :start}   (get-node "MobTimer")]
-    (start-score-timer)
-    (start-mob-timer))
-  nil)
+  (doto (->object p_instance)
+    (-> (.getNode "ScoreTimer") .start)
+    (-> (.getNode "MobTimer") .start)))
 
 (defn main-score-timer-timeout
   [p_instance p_method_data p_user_data n-args args]
   (swap! state update :score inc)
-  (let [{:keys [get-node]} (mapped-instance "Object" (Pointer. p_instance))
-        hud                (get-node "HUD")]
-    (hud-update-score hud (:score @state)))
-  nil)
+  (hud-update-score (.getNode (->object p_instance) "HUD")
+                    (:score @state)))
 
 (defn rand-range
   [a b]
@@ -227,54 +183,39 @@
 
 (defn main-mob-timer-timeout
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [add-child get-node get-class get-name]}         (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [set-offset get-rotation get-position] :as node} (get-node "MobPath/MobSpawnLocation")]
-    (set-offset (rand-int Integer/MAX_VALUE))
-    (let [{:keys [instance]}                             (:mob @state)
-          {:keys [set-position
-                  set-rotation
-                  set-linear-velocity
-                  get-linear-velocity] :as mob-instance} (instance)]
-      (add-child mob-instance)
+  (let [main (->object p_instance)
+        node (.getNode main "MobPath/MobSpawnLocation")]
+    (.setOffset node (rand-int Integer/MAX_VALUE))
+    (let [mob-instance (.instance (:mob @state))]
+      (.addChild main mob-instance)
 
-      (let [direction (+ (proto/->clj (get-rotation))
+      (let [direction (+ (.getRotation node)
                          (/ Math/PI 2.0)
                          (rand-range (- (/ Math/PI 4.0))
                                      (/ Math/PI 4.0)))]
-        (set-position (get-position))
-        (set-rotation direction)
+        (doto mob-instance
+          (.setPosition (.getPosition node))
+          (.setRotation direction)
 
-        (set-linear-velocity (api/vec2 [(rand-range 150 ;; TODO minspeed
-                                                    250)
-                                        0]))
+          (.setLinearVelocity (api/vec2 [(rand-range 150 ;; TODO minspeed
+                                                     250)
+                                         0])))
 
-        (let [result (godot/new-struct :godot-vector-2)
-              v      (mapped-instance "Vector2" (dtype-ffi/->pointer result))]
-          (godot/godot_vector2_rotated_wrapper (dtype-ffi/->pointer (get-linear-velocity))
+        (let [result (godot/new-struct :godot-vector2)]
+          (godot/godot_vector2_rotated_wrapper (dtype-ffi/->pointer (.getLinearVelocity mob-instance))
                                                direction
                                                (dtype-ffi/->pointer result))
-          (set-linear-velocity v)))))
-
-  nil)
+          (.setLinearVelocity mob-instance (->object "Vector2" (dtype-ffi/->pointer result))))))))
 
 (defn main-set-mob
   [p_instance p_method_data p_user_data value]
-  (let [ob  (godot/variant->object (dtype-ffi/ptr->struct :godot-variant (Pointer. value)))
-        mob (mapped-instance "Object" ob)]
-
-    (swap! state assoc :mob mob)))
-
-(defn get-node-by-path
-  [path]
-  (let [{:keys [get-node]} (get-root)]
-    (get-node path)))
+  (swap! state assoc :mob (->object (proto/pvariant->object value))))
 
 (defn hud-start-button-pressed
   [p_instance p_method_data p_user_data n-args args]
-  (let [{:keys [emit-signal get-node] :as hud} (mapped-instance "Object" (Pointer. p_instance))
-        {:keys [hide] :as start-button}        (get-node "StartButton")]
-    (hide)
-    (emit-signal "start_game")))
+  (doto (->object p_instance)
+    (.. (getNode "StartButton") (hide))
+    (.emitSignal "start_game")))
 
 (defn register-methods
   [p-handle]
@@ -332,7 +273,4 @@
 
 (defn reload-scene
   []
-  (let [{:keys [get-tree]} (get-root)
-        {:keys [call-deferred reload-current-scene]} (get-tree)]
-    ;; nodes need to be added to scene on main thread
-    (call-deferred "reload_current_scene")))
+  (.callDeferred (.getTree (get-root)) "reload_current_scene"))
