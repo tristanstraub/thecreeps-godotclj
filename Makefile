@@ -4,9 +4,21 @@ BUILD=$(PROJECT_DIR)/build
 BIN=$(PROJECT_DIR)/bin
 CLASSES=$(PWD)/classes
 CLASSPATH=$(shell clj -Spath | clj -M -e "(require 'godotclj.paths)")
+
+CLJ=clj -Scp $(CLASSPATH)
+
+ifeq ($(RUNTIME),graalvm)
+JAVA_HOME=$(GRAALVM_HOME)
+else
+JAVA_HOME=$(shell clj -M -e "(println (System/getProperty \"java.home\"))")
+endif
+
+JAVA_PATH=$(JAVA_HOME)/bin:$(PATH)
+
 export PROJECT_DIR GODOT_HEADERS BUILD BIN CLASSES CLASSPATH
 
-all: godot-headers godotclj assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so
+
+all: godotclj assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so
 
 clean:
 	rm -fr .cpcache
@@ -24,11 +36,19 @@ assets/dodge_assets: assets/dodge_assets.zip
 assets/icon.png: assets
 	curl https://godotengine.org/themes/godotengine/assets/press/icon_color.png -o assets/icon.png
 
-submodules:
-	git submodule init
-	git submodule update
+godotclj/src/clojure/godotclj/api/gdscript.clj:
+	$(MAKE) -C godotclj src/clojure/godotclj/api/gdscript.clj
 
-godot-headers godotclj: submodules
+godotclj: godot-headers
+	$(MAKE) -C godotclj all
 
-$(BIN)/%.so: godot-headers godotclj
+aot: godotclj/src/clojure/godotclj/api/gdscript.clj
+	mkdir -p $(CLASSES)
+	PATH=$(JAVA_PATH) \
+	$(CLJ) -J-Dtech.v3.datatype.graal-native=true \
+		-J-Dclojure.compiler.direct-linking=true \
+		-J-Dclojure.spec.skip-macros=true \
+		-M -e "(set! *warn-on-reflection* true) (with-bindings {#'*compile-path* (System/getenv \"CLASSES\")} (compile 'thecreeps.main))"
+
+$(BIN)/%.so: godot-headers godotclj godotclj/src/clojure/godotclj/api/gdscript.clj
 	$(MAKE) -C godotclj $@

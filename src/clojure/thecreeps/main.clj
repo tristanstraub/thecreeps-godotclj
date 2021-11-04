@@ -1,12 +1,10 @@
 (ns thecreeps.main
-  (:require [godotclj.api :as api :refer [->object]]
+  (:require [clojure.core.async :as async]
+            [godotclj.api :as api :refer [->object]]
             [godotclj.bindings.godot :as godot]
             [godotclj.callbacks :as callbacks :refer [defer listen]]
-            [clojure.core.async :as async]
-            [godotclj.proto :as proto]
-            [tech.v3.datatype.ffi :as dtype-ffi]
-            [tech.v3.datatype.struct :as dtype-struct])
-  (:import [tech.v3.datatype.ffi Pointer]))
+            [godotclj.proto :as proto])
+  (:import [godotclj.api.gdscript IGodotArea2D IGodotCanvasLayer IGodotCollisionShape2D IGodotNode IGodotObject IGodotTree IGodotRigidBody2D IGodot_Engine IGodotLabel IGodotTimer IGodotSceneTree IGodotControl IGodotAudioStreamPlayer IGodotPosition2D IGodotInput IGodotAnimatedSprite IGodotSpriteFrames IGodotPathFollow2D IGodotPackedScene IGodotButton]))
 
 (comment "See godotclj.api.gdscript namespace for methods that are available on gdscript objects")
 
@@ -21,15 +19,14 @@
   (let [m (Math/sqrt (+ (* a a) (* b b)))]
     [(/ a m) (/ b m)]))
 
-(defn get-root
+(defn get-root ^IGodotNode
   []
-  (.getRoot (.getMainLoop (->object "_Engine"))))
+  (.getRoot ^IGodotTree (.getMainLoop ^IGodot_Engine (->object "_Engine"))))
 
 (defn player-start
-  [p_instance p_method_data p_user_data n-args args]
-  (let [player (->object p_instance)
-        size   (:screen-size @state)
-        shape  (.getNode player "CollisionShape2D")
+  [^IGodotArea2D player p_method_data p_user_data vs]
+  (let [size   (:screen-size @state)
+        shape  ^IGodotCollisionShape2D (.getNode player "CollisionShape2D")
         pos    [(/ (size 0) 2) (/ (size 1) 2)]]
     (swap! state assoc-in [:player :position] pos)
     (.setPosition player (api/vec2 pos))
@@ -38,19 +35,15 @@
     (.setDisabled shape false)))
 
 (defn player-ready
-  [p_instance p_method_data p_user_data n-args args]
-  (let [ob   (->object p_instance)
-        rect (godot/rect2->size (.getViewportRect ob))]
-    (.hide ob)
+  [^IGodotArea2D player p_method_data p_user_data vs]
+  (.hide player)
 
-    (let [size [(godot/vector2-x rect)
-                (godot/vector2-y rect)]]
-      (swap! state assoc :screen-size size))))
+  (swap! state assoc :screen-size (vec (seq (.getViewportRect player)))))
 
 (defn hud-show-message
-  [hud text]
-  (let [message       (.getNode hud "Message")
-        message-timer (.getNode hud "MessageTimer")]
+  [^IGodotCanvasLayer hud text]
+  (let [message       ^IGodotLabel (.getNode hud "Message")
+        message-timer ^IGodotTimer (.getNode hud "MessageTimer")]
     (doto message
       (.setText text)
       (.show))
@@ -61,55 +54,52 @@
       (async/<! (defer #(.hide message))))))
 
 (defn hud-show-game-over
-  [hud]
+  [^IGodotCanvasLayer hud]
   (async/go
     (async/<! (defer #(hud-show-message hud "Game Over!")))
     (defer #(hud-show-message hud "Dodge the Creeps!"))
-    (let [one-shot-timer (.createTimer (.getTree hud) 1)]
+    (let [one-shot-timer (.createTimer ^IGodotSceneTree (.getTree hud) 1)]
       (async/<! (listen one-shot-timer "timeout"))
-      (defer #(.show (.getNode hud "StartButton"))))))
+      (defer #(.show ^IGodotControl (.getNode hud "StartButton"))))))
 
 (defn main-game-over
-  [p_instance p_method_data p_user_data n-args args]
-  (let [main (->object p_instance)]
-    (.stop (.getNode main "Music"))
-    (.play (.getNode main "DeathSound"))
+  [^IGodotArea2D main p_method_data p_user_data vs]
+  (.stop ^IGodotAudioStreamPlayer (.getNode main "Music"))
+  (.play ^IGodotAudioStreamPlayer (.getNode main "DeathSound"))
 
-    (.callGroup (.getTree main) "mobs" "queue_free")
+  (.callGroup ^IGodotSceneTree (.getTree main) "mobs" "queue_free")
 
-    (doto main
-      (-> (.getNode "ScoreTimer") .stop)
-      (-> (.getNode "MobTimer") .stop))
+  (doto main
+    (-> ^IGodotTimer (.getNode "ScoreTimer") .stop)
+    (-> ^IGodotTimer (.getNode "MobTimer") .stop))
 
-    (hud-show-game-over (.getNode main "HUD"))))
+  (hud-show-game-over (.getNode main "HUD")))
 
 (defn hud-update-score
-  [hud score]
-  (.setText (.getNode hud "ScoreLabel") (str score)))
+  [^IGodotCanvasLayer hud score]
+  (.setText ^IGodotLabel (.getNode hud "ScoreLabel") (str score)))
 
 (defn main-new-game
-  [p_instance p_method_data p_user_data n-args args]
+  [^IGodotArea2D main p_method_data p_user_data vs]
   (swap! state assoc :score 0)
-  (let [main (->object p_instance)]
-    (.play (.getNode main "Music"))
+  (.play ^IGodotAudioStreamPlayer (.getNode main "Music"))
 
-    (doto (.getNode main "HUD")
-      (hud-update-score (:score @state))
-      (hud-show-message "Get Ready"))
+  (doto (.getNode main "HUD")
+    (hud-update-score (:score @state))
+    (hud-show-message "Get Ready"))
 
-    (.callv (.getNode main "Player") "start" [(.getPosition (.getNode main "StartPosition"))])
-    (.start (.getNode main "StartTimer"))))
+  (.callv ^IGodotArea2D (.getNode main "Player") "start" [(.getPosition ^IGodotPosition2D (.getNode main "StartPosition"))])
+  (.start ^IGodotTimer (.getNode main "StartTimer")))
 
 (defn player-body-entered
-  [p_instance p_method_data p_user_data n-args args]
-  (let [ob    (->object p_instance)
-        shape (.getNode ob "CollisionShape2D")]
-    (.emitSignal ob "hit")
+  [^IGodotArea2D player p_method_data p_user_data vs]
+  (let [shape ^IGodotCollisionShape2D (.getNode player "CollisionShape2D")]
+    (.emitSignal ^IGodotArea2D player "hit")
     (.setDeferred shape "disabled" true)
-    (.hide ob)))
+    (.hide player)))
 
 (defn main-ready
-  [p_instance p_method_data p_user_data n-args args]
+  [^IGodotNode main p_method_data p_user_data vs]
   ;; randomize mentioned in tutorial
   nil)
 
@@ -120,12 +110,11 @@
      (Math/min (Math/max (float 0) (float b)) (float bottom))]))
 
 (defn player-process
-  [p_instance p_method_data p_user_data n-args p_args]
+  [^IGodotArea2D player p_method_data p_user_data vs]
   (let [speed           400
-        delta           (proto/->clj (first (godot/variants n-args p_args)))
-        input           (->object "Input")
-        player          (->object p_instance)
-        animated-sprite (.getNode player "AnimatedSprite")
+        delta           (first vs)
+        input           ^IGodotInput (->object "Input")
+        animated-sprite ^IGodotAnimatedSprite (.getNode player "AnimatedSprite")
         dir             (cond (.isActionPressed input "ui_right") [1 0]
                               (.isActionPressed input "ui_left")  [-1 0]
                               (.isActionPressed input "ui_up")    [0 -1]
@@ -155,26 +144,25 @@
   nil)
 
 (defn mob-ready
-  [p_instance p_method_data p_user_data n-args args]
-  (let [ob              (->object p_instance)
-        animated-sprite (.getNode ob "AnimatedSprite")
-        mob-types       (.. animated-sprite getSpriteFrames getAnimationNames)]
+  [^IGodotRigidBody2D mob p_method_data p_user_data vs]
+  (let [animated-sprite ^IGodotAnimatedSprite (.getNode mob "AnimatedSprite")
+        mob-types       (. ^IGodotSpriteFrames (. animated-sprite getSpriteFrames) getAnimationNames)]
     (.setAnimation animated-sprite (rand-nth mob-types))))
 
 (defn mob-screen-exited
-  [p_instance p_method_data p_user_data n-args args]
-  (.queueFree (->object p_instance)))
+  [^IGodotRigidBody2D mob p_method_data p_user_data vs]
+  (.queueFree mob))
 
 (defn main-start-timer-timeout
-  [p_instance p_method_data p_user_data n-args args]
-  (doto (->object p_instance)
-    (-> (.getNode "ScoreTimer") .start)
-    (-> (.getNode "MobTimer") .start)))
+  [^IGodotNode main p_method_data p_user_data vs]
+  (doto main
+    (-> ^IGodotTimer (.getNode "ScoreTimer") .start)
+    (-> ^IGodotTimer (.getNode "MobTimer") .start)))
 
 (defn main-score-timer-timeout
-  [p_instance p_method_data p_user_data n-args args]
+  [^IGodotNode main p_method_data p_user_data vs]
   (swap! state update :score inc)
-  (hud-update-score (.getNode (->object p_instance) "HUD")
+  (hud-update-score (.getNode main "HUD")
                     (:score @state)))
 
 (defn rand-range
@@ -183,11 +171,11 @@
     (+ a (* (rand) d))))
 
 (defn main-mob-timer-timeout
-  [p_instance p_method_data p_user_data n-args args]
-  (let [main (->object p_instance)
-        node (.getNode main "MobPath/MobSpawnLocation")]
+  [^IGodotNode main p_method_data p_user_data vs]
+  (let [node ^IGodotPathFollow2D (.getNode main "MobPath/MobSpawnLocation")]
     (.setOffset node (rand-int Integer/MAX_VALUE))
-    (let [mob-instance (.instance (:mob @state))]
+    ;; TODO IGodotRigidBody2D is not derived
+    (let [mob-instance ^IGodotRigidBody2D (.instance ^IGodotPackedScene (:mob @state))]
       (.addChild main mob-instance)
 
       (let [direction (+ (.getRotation node)
@@ -202,76 +190,90 @@
                                                      250)
                                          0])))
 
-        (let [result (godot/new-struct :godot-vector2)]
-          (godot/godot_vector2_rotated_wrapper (dtype-ffi/->pointer (.getLinearVelocity mob-instance))
-                                               direction
-                                               (dtype-ffi/->pointer result))
-          (.setLinearVelocity mob-instance (->object "Vector2" (dtype-ffi/->pointer result))))))))
+        (->> (godot/vector2-rotated (.getLinearVelocity mob-instance) direction)
+             (->object "Vector2")
+             (.setLinearVelocity mob-instance))))))
 
 (defn main-set-mob
   [p_instance p_method_data p_user_data value]
   (swap! state assoc :mob (->object (proto/pvariant->object value))))
 
 (defn hud-start-button-pressed
-  [p_instance p_method_data p_user_data n-args args]
-  (doto (->object p_instance)
-    (.. (getNode "StartButton") (hide))
-    (.emitSignal "start_game")))
+  [^IGodotCanvasLayer hud p_method_data p_user_data vs]
+  (let [start-button ^IGodotButton (.getNode hud "StartButton")]
+    (.hide start-button)
+    (.emitSignal hud "start_game")))
+
+(def classes
+  {"Main"   {:base       "Control"
+             :create     (fn [& args] (println :create))
+             :destroy    (fn [& args] (println :destroy))
+             :properties {"Mob" {:type   :packed-scene
+                                 :value  nil
+                                 :setter #'main-set-mob
+                                 :getter (fn [& args]
+                                           (println :get-mob args))}}
+             :methods    {"new_game"               #'main-new-game
+                          "_ready"                 #'main-ready
+                          "game_over"              #'main-game-over
+                          "_on_StartTimer_timeout" #'main-start-timer-timeout
+                          "_on_ScoreTimer_timeout" #'main-score-timer-timeout
+                          "_on_MobTimer_timeout"   #'main-mob-timer-timeout}}
+
+   "HUD"    {:base    "CanvasLayer"
+             :create  (fn [& args] (println :create))
+             :destroy (fn [& args] (println :destroy))
+             :signals #{"start_game"}
+             :methods {"_on_StartButton_pressed" #'hud-start-button-pressed}}
+
+   "Player" {:base    "Area2D"
+             :create  (fn [& args] (println :create))
+             :destroy (fn [& args] (println :destroy))
+             :methods {"_process"                #'player-process
+                       "_ready"                  #'player-ready
+                       "_on_Player_body_entered" #'player-body-entered
+                       "start"                   #'player-start}
+             :signals #{"hit"}}
+
+   "Mob"    {:base    "RigidBody2D"
+             :create  (fn [& args] (println :create))
+             :destroy (fn [& args] (println :destroy))
+
+             :properties {"min_speed" {:type  nil
+                                       :value 150.0}
+                          "max_speed" {:type  nil
+                                       :value 250.0}}
+
+             :methods {"_ready"                                 #'mob-ready
+                       "_on_VisibilityNotifier2D_screen_exited" #'mob-screen-exited}}
+
+
+
+   })
+
+
+(defn decorate-method
+  [f]
+  (fn [p_instance p_method_data p_user_data n-args p-args]
+    (f (->object p_instance) p_method_data p_user_data (godot/->indexed-variant-array n-args p-args))))
+
+(defn register-classes
+  [p-handle classes]
+  (doseq [[cls {:keys [base create destroy properties methods signals]}] classes]
+    (godot/register-class p-handle cls base create destroy)
+    (doseq [[property-name {property-type :type :keys [value getter setter]}] properties]
+      (godot/register-property p-handle cls property-name setter getter :type property-type :value value))
+    (doseq [[method-name method-fn] methods]
+      (godot/register-method p-handle cls method-name (decorate-method method-fn)))
+    (doseq [signal-name signals]
+      (godot/register-signal p-handle cls signal-name))))
 
 (defn register-methods
   [p-handle]
-  (godot/register-class p-handle
-                        "Main" "Control"
-                        (fn [& args] (println :create))
-                        (fn [& args] (println :destroy)))
-  (godot/register-property p-handle
-                           "Main" "Mob"
-                           #'main-set-mob
-                           (fn [& args]
-                             (println :get-mob args))
-                           :type :packed-scene :value nil)
-
-  (godot/register-method p-handle "Main" "new_game" #'main-new-game)
-  (godot/register-method p-handle "Main" "_ready" #'main-ready)
-  (godot/register-method p-handle "Main" "game_over" #'main-game-over)
-
-  (godot/register-method p-handle "Main" "_on_StartTimer_timeout" #'main-start-timer-timeout)
-  (godot/register-method p-handle "Main" "_on_ScoreTimer_timeout" #'main-score-timer-timeout)
-  (godot/register-method p-handle "Main" "_on_MobTimer_timeout" #'main-mob-timer-timeout)
-
-  (godot/register-class p-handle
-                        "HUD" "CanvasLayer"
-                        (fn [& args] (println :create))
-                        (fn [& args] (println :destroy)))
-
-  (godot/register-signal p-handle "HUD" "start_game")
-  (godot/register-method p-handle "HUD" "_on_StartButton_pressed" #'hud-start-button-pressed)
-
-  (godot/register-class p-handle
-                        "Player" "Area2D"
-                        (fn [& args] (println :create))
-                        (fn [& args] (println :destroy)))
-
-  (godot/register-method p-handle "Player" "_process" #'player-process)
-  (godot/register-method p-handle "Player" "_ready" #'player-ready)
-  (godot/register-method p-handle "Player" "_on_Player_body_entered" #'player-body-entered)
-  (godot/register-method p-handle "Player" "start" #'player-start)
-
-  (godot/register-signal p-handle "Player" "hit")
-
-  (godot/register-class p-handle
-                        "Mob" "RigidBody2D"
-                        (fn [& args] (println :create))
-                        (fn [& args] (println :destroy)))
-
-  (godot/register-property p-handle "Mob" "min_speed" nil nil :value 150.0)
-  (godot/register-property p-handle "Mob" "max_speed" nil nil :value 250.0)
-
-  (godot/register-method p-handle "Mob" "_ready" #'mob-ready)
-  (godot/register-method p-handle "Mob" "_on_VisibilityNotifier2D_screen_exited" #'mob-screen-exited)
+  (register-classes p-handle classes)
 
   (callbacks/register-callbacks p-handle "Main" "HUD" "Mob" "Player"))
 
 (defn reload-scene
   []
-  (.callDeferred (.getTree (get-root)) "reload_current_scene"))
+  (.callDeferred ^IGodotObject (.getTree (get-root)) "reload_current_scene"))
