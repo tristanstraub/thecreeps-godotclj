@@ -204,6 +204,11 @@
     (.hide start-button)
     (.emitSignal hud "start_game")))
 
+(defn decorate-method
+  [f]
+  (fn [p_instance p_method_data p_user_data n-args p-args]
+    (f (->object p_instance) p_method_data p_user_data (godot/->indexed-variant-array n-args p-args))))
+
 (def classes
   {"Main"   {:base       "Control"
              :create     (fn [& args] (println :create))
@@ -213,26 +218,26 @@
                                  :setter #'main-set-mob
                                  :getter (fn [& args]
                                            (println :get-mob args))}}
-             :methods    {"new_game"               #'main-new-game
-                          "_ready"                 #'main-ready
-                          "game_over"              #'main-game-over
-                          "_on_StartTimer_timeout" #'main-start-timer-timeout
-                          "_on_ScoreTimer_timeout" #'main-score-timer-timeout
-                          "_on_MobTimer_timeout"   #'main-mob-timer-timeout}}
+             :methods    {"new_game"               (decorate-method #'main-new-game)
+                          "_ready"                 (decorate-method #'main-ready)
+                          "game_over"              (decorate-method #'main-game-over)
+                          "_on_StartTimer_timeout" (decorate-method #'main-start-timer-timeout)
+                          "_on_ScoreTimer_timeout" (decorate-method #'main-score-timer-timeout)
+                          "_on_MobTimer_timeout"   (decorate-method #'main-mob-timer-timeout)}}
 
    "HUD"    {:base    "CanvasLayer"
              :create  (fn [& args] (println :create))
              :destroy (fn [& args] (println :destroy))
              :signals #{"start_game"}
-             :methods {"_on_StartButton_pressed" #'hud-start-button-pressed}}
+             :methods {"_on_StartButton_pressed" (decorate-method #'hud-start-button-pressed)}}
 
    "Player" {:base    "Area2D"
              :create  (fn [& args] (println :create))
              :destroy (fn [& args] (println :destroy))
-             :methods {"_process"                #'player-process
-                       "_ready"                  #'player-ready
-                       "_on_Player_body_entered" #'player-body-entered
-                       "start"                   #'player-start}
+             :methods {"_process"                (decorate-method #'player-process)
+                       "_ready"                  (decorate-method #'player-ready)
+                       "_on_Player_body_entered" (decorate-method #'player-body-entered)
+                       "start"                   (decorate-method #'player-start)}
              :signals #{"hit"}}
 
    "Mob"    {:base    "RigidBody2D"
@@ -244,8 +249,8 @@
                           "max_speed" {:type  nil
                                        :value 250.0}}
 
-             :methods {"_ready"                                 #'mob-ready
-                       "_on_VisibilityNotifier2D_screen_exited" #'mob-screen-exited}}
+             :methods {"_ready"                                 (decorate-method #'mob-ready)
+                       "_on_VisibilityNotifier2D_screen_exited" (decorate-method #'mob-screen-exited)}}
 
 
 
