@@ -251,26 +251,9 @@
 
    })
 
-
-(defn decorate-method
-  [f]
-  (fn [p_instance p_method_data p_user_data n-args p-args]
-    (f (->object p_instance) p_method_data p_user_data (godot/->indexed-variant-array n-args p-args))))
-
-(defn register-classes
-  [p-handle classes]
-  (doseq [[cls {:keys [base create destroy properties methods signals]}] classes]
-    (godot/register-class p-handle cls base create destroy)
-    (doseq [[property-name {property-type :type :keys [value getter setter]}] properties]
-      (godot/register-property p-handle cls property-name setter getter :type property-type :value value))
-    (doseq [[method-name method-fn] methods]
-      (godot/register-method p-handle cls method-name (decorate-method method-fn)))
-    (doseq [signal-name signals]
-      (godot/register-signal p-handle cls signal-name))))
-
 (defn register-methods
   [p-handle]
-  (register-classes p-handle classes)
+  (godot/register-classes p-handle classes)
 
   (callbacks/register-callbacks p-handle "Main" "HUD" "Mob" "Player"))
 
