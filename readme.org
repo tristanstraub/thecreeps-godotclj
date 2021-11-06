@@ -40,6 +40,8 @@ Has been seen working on the following operating systems:
 The Clojure code needs C wrappers to be generated and built around the GDNative API. Run the following, before starting godot:
 
 #+BEGIN_SRC sh
+git submodule init
+git submodule update
 make
 #+END_SRC
 
