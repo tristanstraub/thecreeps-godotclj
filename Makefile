@@ -20,10 +20,11 @@ export PROJECT_DIR GODOT_HEADERS BUILD BIN CLASSES CLASSPATH
 
 all: assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so godotclj/src/clojure/godotclj/api/gdscript.clj
 
-clean:
+clean: godotclj
 	rm -fr .cpcache
 	$(MAKE) -C godotclj clean
 
+.PHONY: godot-headers godotclj
 godot-headers godotclj:
 	git submodule init
 	git submodule update
