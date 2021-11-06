@@ -18,7 +18,7 @@ JAVA_PATH=$(JAVA_HOME)/bin:$(PATH)
 export PROJECT_DIR GODOT_HEADERS BUILD BIN CLASSES CLASSPATH
 
 
-all: godotclj assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so
+all: assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so godotclj/src/clojure/godotclj/api/gdscript.clj
 
 clean:
 	rm -fr .cpcache
@@ -39,9 +39,6 @@ assets/icon.png: assets
 godotclj/src/clojure/godotclj/api/gdscript.clj:
 	$(MAKE) -C godotclj src/clojure/godotclj/api/gdscript.clj
 
-godotclj: godot-headers
-	$(MAKE) -C godotclj all
-
 aot: godotclj/src/clojure/godotclj/api/gdscript.clj
 	mkdir -p $(CLASSES)
 	PATH=$(JAVA_PATH) \
@@ -49,6 +46,10 @@ aot: godotclj/src/clojure/godotclj/api/gdscript.clj
 		-J-Dclojure.compiler.direct-linking=true \
 		-J-Dclojure.spec.skip-macros=true \
 		-M -e "(set! *warn-on-reflection* true) (with-bindings {#'*compile-path* (System/getenv \"CLASSES\")} (compile 'thecreeps.main))"
+
+godot-headers godotclj:
+	git submodule init
+	git submodule update
 
 $(BIN)/%.so: godot-headers godotclj godotclj/src/clojure/godotclj/api/gdscript.clj
 	$(MAKE) -C godotclj $@
