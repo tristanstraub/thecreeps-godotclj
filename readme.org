@@ -34,6 +34,7 @@ GraalVM will be found via the GRAALVM_HOME parameter.
 Has been seen working on the following operating systems:
 
 - Fedora 32
+- Ubuntu 20.04
 
 * Building for the JVM
 
