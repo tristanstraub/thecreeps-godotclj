@@ -1,4 +1,6 @@
-all: assets/dodge_assets assets/icon.png lib/godot-3.4.1.jar
+JAR_URL=https://github.com/tristanstraub/godotclj/releases/download/v0.0.3/godotclj.jar
+
+all: assets/dodge_assets assets/icon.png lib/godotclj.jar
 
 assets:
 	mkdir -p assets
@@ -12,6 +14,6 @@ assets/dodge_assets: assets/dodge_assets.zip
 assets/icon.png: assets
 	curl https://godotengine.org/themes/godotengine/assets/press/icon_color.png -o assets/icon.png
 
-lib/godot-3.4.1.jar:
+lib/godotclj.jar:
 	mkdir -p $(shell dirname $@)
-	curl https://github.com/tristanstraub/godotclj/releases/godot-3.4.1.jar -o $@
+	curl -L $(JAR_URL) -o $@
