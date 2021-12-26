@@ -37,16 +37,18 @@ Has been seen working on the following operating systems:
 
 * Running
 
-The first time the game is loaded by godot, the editor needs to be invoked to import the assets. Run the following script, which expects the "godot" executable to be on the PATH:
+The first time the game is loaded by godot, assets need to be downloaded and the editor needs to be invoked to import the assets. Run the following script, which expects the "godot" executable to be on the PATH:
 
 #+BEGIN_SRC sh
-clj -M -e "(require 'godotclj.runner) (godotclj.runner/start \"--editor\" \"--quit\")"
+  make
+
+  clj -M -e "(require 'godotclj.runner) (godotclj.runner/start \"--editor\" \"--quit\")"
 #+END_SRC
 
 Then, to run the game from the command line, run godot without any arguments:
 
 #+BEGIN_SRC sh
-clj -M -e "(require 'godotclj.runner) (godotclj.runner/start \"-v\")"
+  clj -M -e "(require 'godotclj.runner) (godotclj.runner/start \"-v\")"
 #+END_SRC
 
 This will also start an NREPL session.
