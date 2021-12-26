@@ -1,6 +1,10 @@
-JAR_URL=https://github.com/tristanstraub/godotclj/releases/download/v0.0.3/godotclj.jar
+GODOTCLJ_VERSION=v0.0.5
+JAR_URL=https://github.com/tristanstraub/godotclj/releases/download/$(GODOTCLJ_VERSION)/godotclj.jar
 
 all: assets/dodge_assets assets/icon.png lib/godotclj.jar
+
+clean:
+	rm -fr lib natives cache
 
 assets:
 	mkdir -p assets
