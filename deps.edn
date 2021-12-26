@@ -1,5 +1,5 @@
 {:paths #{"classes" "src/clojure" "resources"}
- :deps  {godotclj/godotclj              {:local/root "godotclj/target/godotclj.jar"}
+ :deps  {godotclj/godotclj              {:local/root "lib/godotclj.jar"}
          ch.qos.logback/logback-classic {:mvn/version "1.2.3"}
 
          nrepl/nrepl                    {:mvn/version "0.8.3"}
