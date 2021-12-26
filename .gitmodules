@@ -1,6 +1,0 @@
-[submodule "godot-headers"]
-	path = godot-headers
-	url = https://github.com/godotengine/godot-headers
-[submodule "godotclj"]
-	path = godotclj
-	url = https://github.com/tristanstraub/godotclj
