@@ -4,9 +4,10 @@
             [godotclj.bindings.godot :as godot]
             [godotclj.callbacks :as callbacks :refer [defer listen]]
             [godotclj.proto :as proto])
-  (:import [godotclj.api.gdscript IGodotArea2D IGodotCanvasLayer IGodotCollisionShape2D IGodotNode IGodotObject IGodotTree IGodotRigidBody2D IGodot_Engine IGodotLabel IGodotTimer IGodotSceneTree IGodotControl IGodotAudioStreamPlayer IGodotPosition2D IGodotInput IGodotAnimatedSprite IGodotSpriteFrames IGodotPathFollow2D IGodotPackedScene IGodotButton]))
+  (:import [godotclj.api.gdnative IGodotArea2D IGodotCanvasLayer IGodotCollisionShape2D IGodotNode IGodotObject IGodotTree IGodotRigidBody2D IGodot_Engine IGodotLabel IGodotTimer IGodotSceneTree IGodotControl IGodotAudioStreamPlayer IGodotPosition2D IGodotInput IGodotAnimatedSprite IGodotSpriteFrames IGodotPathFollow2D IGodotPackedScene IGodotButton]
+           [tech.v3.datatype.ffi Pointer]))
 
-(comment "See godotclj.api.gdscript namespace for methods that are available on gdscript objects")
+(comment "See godotclj.api.gdnative namespace for methods that are available on gdnative objects")
 
 (defonce state
   (atom {:player      {:position [100 100]
@@ -207,7 +208,7 @@
 (defn decorate-method
   [f]
   (fn [p_instance p_method_data p_user_data n-args p-args]
-    (f (->object p_instance) p_method_data p_user_data (godot/->indexed-variant-array n-args p-args))))
+    (f (->object (Pointer. p_instance)) p_method_data p_user_data (godot/->indexed-variant-array n-args p-args))))
 
 (def classes
   {"Main"   {:base       "Control"
