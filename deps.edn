@@ -1,6 +1,6 @@
 {:paths #{"src/clojure"}
  :deps  {io.github.godotclj/godotclj {:git/url "https://github.com/godotclj/godotclj"
-                                      :sha     "c8590f2b00e1a2af81655b654913c39d560c89a8"}
+                                      :sha     "88ba94deed9d226a61709b945a59f28ed5083d39"}
 
          nrepl/nrepl       {:mvn/version "0.8.3"}
          refactor-nrepl    {:mvn/version "2.5.1"}
