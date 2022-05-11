@@ -19,10 +19,6 @@ export PROJECT_DIR GODOT_HEADERS BUILD BIN CLASSES CLASSPATH
 
 all: assets/dodge_assets assets/icon.png $(BIN)/libgodotclj_gdnative.so godotclj/src/clojure/godotclj/api/gdscript.clj
 
-clean:
-	rm -fr .cpcache
-	$(MAKE) -C godotclj clean
-
 assets:
 	mkdir -p assets
 
